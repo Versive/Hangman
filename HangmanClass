@@ -1,0 +1,555 @@
+ * Created by Matthew Danielson, layout was created with WindowBuilder for Eclipse.
+import java.awt.Color;
+
+
+public class Hangman {
+	private static final int HEIGHT = 450;
+	private static final int WIDTH = HEIGHT * 16/9;
+	
+	private int turn = MAX_TURNS;
+	private static final int MAX_TURNS = 10;
+	
+	private static final String WORD_FILE = "inFiles/hangman_words.txt";
+	private String imgPath;
+	
+	private static final char BLANK = '_';
+	private boolean gameOver = false;
+	private boolean hinted = false;
+	
+	Random rGen = new Random();
+	ImageIcon img;
+	
+	private JFrame frame;
+	JLabel lblPicture;
+	JLabel lblGuessableWord;
+	JLabel lblGuessesMade;
+	JLabel lblTurnsLeft;
+	JLabel lblGameMessage;
+	
+	private ArrayList<String> wordList = new ArrayList<String>();
+	private ArrayList<String> guessedLetters = new ArrayList<>();
+	private char[] wordInPlay;
+	private char[] usrWordInPlay;
+
+	//Create the application.
+	public Hangman() {
+		loadArrays();
+		initialize();
+	}
+	
+	private void winner() {
+		lblGameMessage.setText("You won, you rascal, you!");
+		
+		imgPath = "images/best20smiley.gif";
+		img = new ImageIcon(imgPath);
+		img.getImage().flush();
+		lblPicture.setIcon(img);
+		
+		gameOver = true;
+	}
+	
+	private void loser() {
+		lblGameMessage.setText("That sadly elusive word was: " + getWordInPlay());		
+		gameOver = true;
+	}
+	
+	/*
+	 * Returns a string with spaces between the letters if passed false
+	 * otherwise it returns the string without spaces between.
+	 * The string being returned is the word being built by the player's guessed letters.
+	 */
+	private String getUsrWordInPlay(boolean b) {
+		if(!b) {
+			String s = "";
+			for(char c : usrWordInPlay) {
+				s += c + " ";
+			}
+			//uncomment the line below and comment out the second one below to enable some debugging help
+			//return s + "   (" + usrWordInPlay.length + ") " + getWordInPlay();
+			return s;
+		}
+		else {
+			String s = "";
+			for(char c : usrWordInPlay) {
+				s += c;
+			}
+			return s + "   (" + usrWordInPlay.length + ") " + getWordInPlay();
+		}
+	}
+	
+	//Return a string comprised of the char[] of the current wordInPlay
+	private String getWordInPlay() {
+		String s = "";
+		for(char c : wordInPlay) {
+			s += c;
+		}
+		return s;
+	}
+	
+	//Return a String comprised of the Strings of the current guesses made by the user
+	private String getGuesses() {
+		String letters = "";
+		for(String s: guessedLetters) {
+			letters += s + " ";
+		}
+		return letters;
+	}
+	
+	/*
+	 * The next three methods update the UI based on the action of user button guesses as long as the game 
+	 * isn't over: checks if the letter has already been guessed, calls the method to see if the letter is
+	 * in the wordInPlay and if so replaces the BLANK with the letter, then calls the method to determine
+	 * what, if anything, should happen after the guess has been made.
+	 */
+	private void updateGuesses(String s, JLabel lbl) {
+		if (!gameOver) {
+			if (!guessedLetters.contains(s.toLowerCase())) {
+				hinted = true;
+				guessedLetters.add(s.toLowerCase());
+
+				shouldReplace(s.toLowerCase());
+
+				lblGuessableWord.setText(getUsrWordInPlay(false));
+				lblGameMessage.setText("");
+
+				processTurn(true);
+
+				if (!getWordInPlay().contains(s.toLowerCase()))	processTurn(false);
+			}
+			else lblGameMessage.setText("You know you guessed that letter already, right?");
+		
+			if (!(lbl == null)) lbl.setText(getGuesses());
+		}
+		else lblGameMessage.setText("Game's over, champ!");
+	}
+	
+	private void shouldReplace(String s) {
+		for(int i = 0; i < wordInPlay.length; i++) {
+			if(s.charAt(0) == (wordInPlay[i])) usrWordInPlay[i] = s.charAt(0);
+		}
+	}
+	
+	private void processTurn(boolean b) {
+		if(!hasBlank()) winner();
+		else if(turn > 0){
+			if(b) {
+				lblGuessableWord.setText(getUsrWordInPlay(false));
+			}
+			else {
+				turn--;
+				
+				imgPath = "images/hangman" + turn + ".png";
+				img = new ImageIcon(imgPath);
+				img.getImage().flush();
+				lblPicture.setIcon(img);
+				
+				lblTurnsLeft.setText(turn + "/10");
+				
+				if(turn == 0) loser();
+			};
+		}
+	}
+	
+	private void loadArrays() {
+		Scanner reader = getFileReader(WORD_FILE);
+		
+		while(reader.hasNextLine()) {
+			wordList.add(reader.nextLine());
+		}
+		
+		turn = MAX_TURNS;
+		wordInPlay = getRandomWord().toCharArray();
+		usrWordInPlay = new char[wordInPlay.length];
+		for(int i = 0; i < wordInPlay.length; i++) usrWordInPlay[i] = BLANK;
+	}
+	
+	private boolean hasBlank() {
+		boolean contains = false;
+		for(char c : usrWordInPlay) {
+			if(c == '_') contains = true;
+		}
+		return contains;
+	}
+	
+	//generate a random word from the wordList ArrayList
+	 
+	private String getRandomWord() {
+		int i = rGen.nextInt(wordList.size());
+		return wordList.get(i);
+	}
+	
+	public Scanner getFileReader(String fileName) {
+		File file = new File(fileName);
+
+		try {
+			return new Scanner(file);
+		} 
+		catch (FileNotFoundException e)	{
+			System.out.println(e.getMessage());
+			return null;
+		}
+	}	
+
+	//Initialize the contents of the frame.
+	private void initialize() {
+		imgPath = "images/hangman" + turn + ".png";
+		
+		frame = new JFrame("Hangman");
+		frame.setBounds(100, 100, WIDTH, HEIGHT);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.getContentPane().setLayout(null);
+		
+		lblPicture = new JLabel(img = new ImageIcon(imgPath));
+		lblPicture.setFont(new Font("Agency FB", Font.PLAIN, 16));
+		lblPicture.setHorizontalAlignment(SwingConstants.CENTER);
+		lblPicture.setBounds(10, 30, 311, 302);
+		frame.getContentPane().add(lblPicture);
+		
+		JLabel lblWordToGuess = new JLabel("Word to Guess:");
+		lblWordToGuess.setFont(new Font("Agency FB", Font.PLAIN, 24));
+		lblWordToGuess.setHorizontalAlignment(SwingConstants.LEFT);
+		lblWordToGuess.setBounds(331, 11, 203, 74);
+		frame.getContentPane().add(lblWordToGuess);
+		
+		lblGuessableWord = new JLabel(getUsrWordInPlay(false));
+		lblGuessableWord.setFont(new Font("Agency FB", Font.PLAIN, 24));
+		lblGuessableWord.setHorizontalAlignment(SwingConstants.CENTER);
+		lblGuessableWord.setBounds(544, 11, 230, 74);
+		frame.getContentPane().add(lblGuessableWord);
+		
+		JLabel lblLettersGuessed = new JLabel("Letters Guessed:");
+		lblLettersGuessed.setFont(new Font("Agency FB", Font.PLAIN, 24));
+		lblLettersGuessed.setHorizontalAlignment(SwingConstants.LEFT);
+		lblLettersGuessed.setBounds(331, 94, 203, 74);
+		frame.getContentPane().add(lblLettersGuessed);
+		
+		lblGuessesMade = new JLabel();
+		lblGuessesMade.setFont(new Font("Agency FB", Font.PLAIN, 24));
+		lblGuessesMade.setHorizontalAlignment(SwingConstants.CENTER);
+		lblGuessesMade.setBounds(544, 94, 230, 74);
+		frame.getContentPane().add(lblGuessesMade);
+		
+		JLabel lblGuessesLeft = new JLabel("Guesses Left:");
+		lblGuessesLeft.setFont(new Font("Agency FB", Font.PLAIN, 24));
+		lblGuessesLeft.setHorizontalAlignment(SwingConstants.LEFT);
+		lblGuessesLeft.setBounds(331, 179, 203, 74);
+		frame.getContentPane().add(lblGuessesLeft);
+		
+		lblTurnsLeft = new JLabel(turn + "/10");
+		lblTurnsLeft.setFont(new Font("Agency FB", Font.PLAIN, 24));
+		lblTurnsLeft.setHorizontalAlignment(SwingConstants.CENTER);
+		lblTurnsLeft.setBounds(544, 179, 230, 74);
+		frame.getContentPane().add(lblTurnsLeft);
+		
+		lblGameMessage = new JLabel();
+		lblGameMessage.setForeground(Color.RED);
+		lblGameMessage.setFont(new Font("Agency FB", Font.PLAIN, 22));
+		lblGameMessage.setHorizontalAlignment(SwingConstants.CENTER);
+		lblGameMessage.setBounds(341, 258, 433, 74);
+		frame.getContentPane().add(lblGameMessage);
+		
+		UIManager.put("Button.font", new FontUIResource("Agency FB", Font.BOLD, 16));
+		
+		JButton btnA = new JButton("A");
+		btnA.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("A", lblGuessesMade);
+			}
+		});
+		btnA.setBounds(10, 343, 49, 23);
+		frame.getContentPane().add(btnA);
+		
+		JButton btnB = new JButton("B");
+		btnB.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("B", lblGuessesMade);			}
+		});
+		btnB.setBounds(69, 343, 49, 23);
+		frame.getContentPane().add(btnB);
+		
+		JButton btnC = new JButton("C");
+		btnC.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("C", lblGuessesMade);
+				}
+		});
+		btnC.setBounds(128, 343, 49, 23);
+		frame.getContentPane().add(btnC);
+		
+		JButton btnD = new JButton("D");
+		btnD.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("D", lblGuessesMade);
+			}
+		});
+		btnD.setBounds(187, 343, 49, 23);
+		frame.getContentPane().add(btnD);
+		
+		JButton btnE = new JButton("E");
+		btnE.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				updateGuesses("E", lblGuessesMade);
+			}
+		});
+		btnE.setBounds(246, 343, 49, 23);
+		frame.getContentPane().add(btnE);
+		
+		JButton btnF = new JButton("F");
+		btnF.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("F", lblGuessesMade);
+			}
+		});
+		btnF.setBounds(305, 343, 49, 23);
+		frame.getContentPane().add(btnF);
+		
+		JButton btnG = new JButton("G");
+		btnG.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("G", lblGuessesMade);
+			}
+		});
+		btnG.setBounds(364, 343, 49, 23);
+		frame.getContentPane().add(btnG);
+		
+		JButton btnH = new JButton("H");
+		btnH.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("H", lblGuessesMade);
+			}
+		});
+		btnH.setBounds(423, 343, 49, 23);
+		frame.getContentPane().add(btnH);
+		
+		JButton btnI = new JButton("I");
+		btnI.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("I", lblGuessesMade);
+			}
+		});
+		btnI.setBounds(482, 343, 49, 23);
+		frame.getContentPane().add(btnI);
+		
+		JButton btnJ = new JButton("J");
+		btnJ.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("J", lblGuessesMade);
+			}
+		});
+		btnJ.setBounds(541, 343, 49, 23);
+		frame.getContentPane().add(btnJ);
+		
+		JButton btnK = new JButton("K");
+		btnK.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("K", lblGuessesMade);
+			}
+		});
+		btnK.setBounds(600, 343, 49, 23);
+		frame.getContentPane().add(btnK);
+		
+		JButton btnL = new JButton("L");
+		btnL.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("L", lblGuessesMade);
+			}
+		});
+		btnL.setBounds(659, 343, 49, 23);
+		frame.getContentPane().add(btnL);
+		
+		JButton btnM = new JButton("M");
+		btnM.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("M", lblGuessesMade);
+			}
+		});
+		btnM.setBounds(718, 343, 49, 23);
+		frame.getContentPane().add(btnM);
+		
+		JButton btnN = new JButton("N");
+		btnN.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("N", lblGuessesMade);
+			}
+		});
+		btnN.setBounds(10, 377, 49, 23);
+		frame.getContentPane().add(btnN);
+		
+		JButton btnO = new JButton("O");
+		btnO.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("O", lblGuessesMade);
+			}
+		});
+		btnO.setBounds(69, 377, 49, 23);
+		frame.getContentPane().add(btnO);
+		
+		JButton btnP = new JButton("P");
+		btnP.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("P", lblGuessesMade);
+			}
+		});
+		btnP.setBounds(128, 377, 49, 23);
+		frame.getContentPane().add(btnP);
+		
+		JButton btnQ = new JButton("Q");
+		btnQ.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("Q", lblGuessesMade);
+			}
+		});
+		btnQ.setBounds(187, 377, 49, 23);
+		frame.getContentPane().add(btnQ);
+		
+		JButton btnR = new JButton("R");
+		btnR.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("R", lblGuessesMade);
+			}
+		});
+		btnR.setBounds(246, 377, 49, 23);
+		frame.getContentPane().add(btnR);
+		
+		JButton btnS = new JButton("S");
+		btnS.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("S", lblGuessesMade);
+			}
+		});
+		btnS.setBounds(305, 377, 49, 23);
+		frame.getContentPane().add(btnS);
+		
+		JButton btnT = new JButton("T");
+		btnT.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("T", lblGuessesMade);
+			}
+		});
+		btnT.setBounds(364, 377, 49, 23);
+		frame.getContentPane().add(btnT);
+		
+		JButton btnU = new JButton("U");
+		btnU.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("U", lblGuessesMade);
+			}
+		});
+		btnU.setBounds(423, 377, 49, 23);
+		frame.getContentPane().add(btnU);
+		
+		JButton btnV = new JButton("V");
+		btnV.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("V", lblGuessesMade);
+			}
+		});
+		btnV.setBounds(482, 377, 49, 23);
+		frame.getContentPane().add(btnV);
+		
+		JButton btnW = new JButton("W");
+		btnW.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("W", lblGuessesMade);
+			}
+		});
+		btnW.setBounds(541, 377, 49, 23);
+		frame.getContentPane().add(btnW);
+		
+		JButton btnX = new JButton("X");
+		btnX.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("X", lblGuessesMade);
+			}
+		});
+		btnX.setBounds(600, 377, 49, 23);
+		frame.getContentPane().add(btnX);
+		
+		JButton btnY = new JButton("Y");
+		btnY.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("Y", lblGuessesMade);
+			}
+		});
+		btnY.setBounds(659, 377, 49, 23);
+		frame.getContentPane().add(btnY);
+		
+		JButton btnZ = new JButton("Z");
+		btnZ.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				updateGuesses("Z", lblGuessesMade);
+			}
+		});
+		btnZ.setBounds(718, 377, 49, 23);
+		frame.getContentPane().add(btnZ);
+		
+		JMenuBar menuBar = new JMenuBar();
+		menuBar.setBounds(0, 0, 97, 21);
+		frame.getContentPane().add(menuBar);
+		
+		JMenu mnGame = new JMenu("Game");
+		menuBar.add(mnGame);
+		
+		JMenuItem mntmNewGame = new JMenuItem("New Game");
+		mntmNewGame.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				EventQueue.invokeLater(new Runnable() {
+					public void run() {
+						try {
+							Hangman window = new Hangman();
+							window.frame.setVisible(true);
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+				});
+			}
+		});
+		mnGame.add(mntmNewGame);
+		
+		JMenuItem mntmHint = new JMenuItem("One Hint (per game)");
+		mntmHint.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {				
+				for(int i = 0; i < wordInPlay.length; i++) {
+					if(!hinted) {
+						char c = wordInPlay[i];
+						String s = "";
+						s += c;
+						updateGuesses(s, lblGuessesMade);
+					}
+				}
+			}
+		});
+		mnGame.add(mntmHint);
+		
+		JMenuItem mntmEndGame = new JMenuItem("End Game");
+		mntmEndGame.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				loser();
+			}
+		});
+		mnGame.add(mntmEndGame);
+		
+		JMenuItem mntmQuit = new JMenuItem("Quit");
+		mntmQuit.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				System.exit(0);
+			}
+		});
+		mnGame.add(mntmQuit);
+	}
+
+	//Launch the application
+	public static void main(String[] args) {
+		EventQueue.invokeLater(new Runnable() {
+			public void run() {
+				try {
+					Hangman window = new Hangman();
+					window.frame.setVisible(true);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
+	}
+}
