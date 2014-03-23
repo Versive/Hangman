@@ -1,4 +1,4 @@
 Hangman
 =======
 
-A hangman game I created for a OOP w/Java class
+A hangman game I created for an OOP w/Java class
